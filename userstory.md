@@ -1,4 +1,4 @@
- user stories :
+ user stories for FitBuddy
 
 - [ ] **User Registration and Authentication:**
    - [ ] As a new user, I want to register on the platform using my email and password, so I can access personalized features.
