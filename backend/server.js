@@ -1,9 +1,16 @@
+import 'dotenv/config'
 import express from "express"
+import path from "path";
+import connectDB from "./config/dbConn.js"
+
+
+connectDB()
+
 const app = express();
 
 const PORT = process.env.PORT || 3000
 
-app.use(express.static(path.join(__dirname, "public")))
+
 
 app.get('/', (req, res) => {
     res.send("Welcome to FitBuddy!");
