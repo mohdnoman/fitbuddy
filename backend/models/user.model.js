@@ -20,6 +20,9 @@ const UserSchema = new mongoose.Schema({
         type: String, //hashed password
         required: [true, "password is required"],
     },
+    profile: {
+        type: String
+    },
     age: {
         type: Number, //in years
         required: true
