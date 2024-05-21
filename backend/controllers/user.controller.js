@@ -20,16 +20,16 @@ const registerUser = asyncHandler(async (req, res) => {
 
 
     // check if user already exists
-    const existedUser = User.find({
+    const existedUser = await User.findOne({
         $or: [{ name }, { email }]
     })
 
     if (existedUser) {
         throw new ApiError(409, "User with username or email already exists!!!")
     }
-
+    console.log("req.files:- ", req.file.path)
     // check for image
-    const profileLocalPath = req.files?.profile[0]?.path
+    const profileLocalPath =  req.file.path
 
     if (!profileLocalPath) {
         throw new ApiError(400, "Profile picture is required.")
@@ -54,7 +54,7 @@ const registerUser = asyncHandler(async (req, res) => {
         height,
         fitnessGoals,
         dietaryPreferences,
-        profile: profile.url || ""
+        profile: profile.url
     })
 
     //check if user is created
