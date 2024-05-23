@@ -1,9 +1,10 @@
 import { asyncHandler } from "../utils/asyncHandler.js"
 import { User } from "../models/user.model.js";
 import { ApiError } from "../utils/ApiError.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { uploadOnCloudinary, removeFromCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
+import { response } from "express";
 
 const generateAccessAndRefereshTokens = async (userId) => {
     try {
@@ -207,10 +208,103 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     }
 })
 
+const changeCurrentPassword = asyncHandler(async (req, res) => {
+    const { oldPassword, newPassword } = req.body
+
+    const user = await User.findById(req.user?._id)
+
+    if (!user) {
+        throw new ApiError(400, "Invalid old password")
+    }
+
+    const isPasswordCorrect = await user.isPasswordCorrect(oldPassword)
+
+    if (!isPasswordCorrect) {
+        throw new ApiError(400, "Invalid old password")
+    }
+
+    user.password = newPassword
+    user.save({ validateBeforeSave: false })
+
+    return res.status(200).json(new ApiResponse(200, {},
+        "password changed successfully"
+    ))
+})
+
+const getCurrentUser = asyncHandler(async (req, res) => {
+    return res.status(200).json(new ApiResponse(200, req.user, "user fetched successfully"))
+})
+
+const updateUserProfile = asyncHandler(async (req, res) => {
+
+    const profileLocalPath = req.file.path
+    const prevProfileLink = req.user?.profile
+
+    if (!profileLocalPath) {
+        throw new ApiError(400, "Profile picture is required")
+    }
+
+    const profile = await uploadOnCloudinary(profileLocalPath)
+
+    if (!profile.url) {
+        throw new ApiError(400, "Error while fetching profile url from cloudinary.")
+    }
+
+    await removeFromCloudinary(prevProfileLink)
+
+    const user = await User.findByIdAndUpdate(req.user?._id,
+        {
+            $set: {
+                profile: profile.url
+            }
+        },
+        { new: true }
+    ).select("-password")
+
+    return res.status(200).json(new ApiResponse(200, user, "profile updated successfully"))
+
+
+})
+
+const updateUserInfo = asyncHandler(async (req, res) => {
+    const { name, email, age, gender, weight, height, fitnessGoals, dietaryPreferences } = req.body
+    const user = req.user?._id
+
+    if (!name || !email || !age || !gender || !weight || !height || !fitnessGoals || !dietaryPreferences) {
+        throw new ApiError(400, "All field are required")
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(user,
+        {
+            $set: {
+                name: name,
+                email: email,
+                age: age,
+                gender: gender,
+                weight: weight,
+                height: height,
+                fitnessGoals: fitnessGoals,
+                dietaryPreferences: dietaryPreferences
+            },
+        },
+        { new: true }
+    ).select("-password -refreshToken")
+
+    if (!updatedUser) {
+        throw new ApiError(500, "Error while updating user")
+    }
+
+    return res.status(200).json(new ApiResponse(200, updatedUser, "user updated successfully"))
+})
+
 
 export {
     registerUser,
     loginUser,
     logoutUser,
-    refreshAccessToken
+    refreshAccessToken,
+    changeCurrentPassword,
+    getCurrentUser,
+    updateUserProfile,
+    updateUserInfo
 }
